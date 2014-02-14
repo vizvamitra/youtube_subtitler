@@ -4,13 +4,13 @@
 
 Youtube subtitler is a **Ruby** script that could help you to download subtitles for single or many youtube videos at once.
 
-All subtitles files would be saved in a new directory named subtitles_TIMESTAMP, where TIMESTAMP is a sequence of digits. You can specify a path where this directory would be created.
+All subtitles files would be saved in a new directory named `subtitles_TIMESTAMP`, where TIMESTAMP is a sequence of digits. You can specify a path where this directory would be created.
 
 Script allows you to choose prefered language of subtitles (yet youtube could not have this language) using the `-l` key.
 
-You can also specify the key `-c` (or `--collect`) in order to tell the script to save all subtitles in one file.
+You can also specify the key `-c` (or `--collect`) in order to tell the script to save all subtitles in one file `all_subtitles.txt`.
 
-If an error occures with any of given links, script will log these links to file 'subtitles_TIMESTAMP/errors.log' so you can correct your links or perhaps choose another language and give this links to the script again using `< errors.log`
+If an error occures with any of given links, script will log these links to file `subtitles_TIMESTAMP/errors.log` so you can correct your links or perhaps choose another language and give this links to the script again using ` < errors.log`
 
 ##USAGE
 
@@ -26,7 +26,7 @@ If an error occures with any of given links, script will log these links to file
 
 	  -lLANG
 
-	  		Allows to specify desired subtitles language (**LANG**)
+	  		Allows to specify desired subtitles language (LANG)
 
 	  -c, --collect
 
@@ -40,6 +40,6 @@ If an error occures with any of given links, script will log these links to file
 
 ##CREDITS
 
-Made for you by Vizvamitra (vizvamitra@gmail.com, Russia)
+Made for you by **Vizvamitra** (vizvamitra@gmail.com, Russia)
 
-Special thanks to Dmitry aka Blackbird~
+Special thanks to **Dmitry** aka **Blackbird~**
