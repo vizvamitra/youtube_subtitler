@@ -22,19 +22,25 @@ module YoutubeSubtitler
 		require 'cgi'
 		include REXML
 
-		def parse(raw_text)
-			# getting <transcript> element of input raw xml file
-			transcript = Document.new(raw_text).root
-
-			# initializing output variable
+		def self.parse_subtitles(raw_text)
 			text = ""
-
-			# parsing
-			transcript.each do |doc|
+			Document.new(raw_text).root.each do |doc|
 				text << CGI::unescapeHTML(doc.text).gsub(/^\s*/, '') << " " if doc.text != nil
 			end
+			text.gsub(/^\s+/, '')
+		end
 
-			text
+		def self.parse_langs(raw_langs)
+			langs = []
+			Document.new(raw_langs).elements.each('*/track') do |track|
+				langs << track.attributes['lang_code']
+			end
+			langs
+		end
+
+		def self.parse_title(raw_info)
+			title = Document.new(raw_info).root.elements['title'].text
+			title.gsub(/[^\w\s\d\.$#@!()-=\+\\]/, '').gsub(/\s+/, ' ')
 		end
 	end
 
@@ -43,24 +49,19 @@ module YoutubeSubtitler
 	# and specified language file exists for this video
 	class Downloader
 		require 'open-uri'
-		require 'rexml/document'
-		include REXML
 
 		def initialize(lang)
 			@lang = lang
 		end
 
-		# will return [nil, nil] if link is incorrect
+		# will return [error_string, nil] if link is incorrect
 		def download(link)
-			match = /^(?:(?:http:\/\/)?(?:www)?youtu\.be\/)(.+)$/.match(link)
-			if !match
-				match = /^(?:(?:http:\/\/)?(?:www\.)?youtube\.com\/watch\?v=)(.+)&.*$/.match(link)
+			# getting id of a video
+			unless video_id = get_video_id(link)
+				return ["'#{link}', wrong link", nil]
 			end
-			video_id = match[1] if match
 
-			(return ["'#{link}', wrong link", nil]) if video_id.nil?
-
-			# check for language avalability
+			# checking for language avalability
 			languages = get_languages(video_id)
 			if languages.nil?
 				return ["'#{link}', couldn't download language info", nil]
@@ -71,20 +72,27 @@ module YoutubeSubtitler
 			end
 
 			# getting video title
-			title = get_title(video_id).gsub(/[^\w\s\d\.$#@!()-=\+\\]/, '').gsub(/\s+/, ' ')
+			title = get_title(video_id)
 			title ||= video_id
 
-			begin
-				text = open("http://video.google.com/timedtext?lang=#{@lang}&v=#{video_id}").read
-				text.gsub!(/\n/, ' ')
-			rescue => e
-				return ["'#{link}', couldn't download subtitles", nil]
-			end
+			# getting subtitles text
+			text = get_subtitles(video_id)
+			return ["'#{link}', couldn't download subtitles", nil] unless text
 
 			[text, title]
 		end
 
 	private
+
+		def get_video_id(link)
+			if match = /^(?:(?:http:\/\/)?(?:www)?youtu\.be\/)(.+)$/.match(link)
+				match[1]
+			elsif match = /^(?:(?:http:\/\/)?(?:www\.)?youtube\.com\/watch\?v=)(.+)&.*$/.match(link)
+				match[1]
+			else
+				nil
+			end
+		end
 
 		def get_title(video_id)
 			begin
@@ -93,21 +101,26 @@ module YoutubeSubtitler
 				$stderr << "#{'Error'.red}: downloading title for video #{video_id} failed"
 				return nil
 			end
-			Document.new(raw_info).root.elements['title'].text
+			Parser.parse_title(raw_info)
 		end
 
 		def get_languages(video_id)
-			langs = []
 			begin
 				raw_langs = open("http://www.youtube.com/api/timedtext?type=list&v=#{video_id}")
 			rescue => e
 				return nil
 			end
-			Document.new(raw_langs).elements.each('*/track') do |track|
-				langs << track.attributes['lang_code']
-			end
+			Parser.parse_langs(raw_langs)
+		end
 
-			langs
+		def get_subtitles(video_id)
+			begin
+				raw_text = open("http://video.google.com/timedtext?lang=#{@lang}&v=#{video_id}").read
+				raw_text.gsub!(/\n/, ' ')
+			rescue => e
+				return nil
+			end
+			Parser.parse_subtitles(raw_text)
 		end
 	end
 
@@ -125,11 +138,11 @@ module YoutubeSubtitler
 			begin
 				subtitles.each.with_index do |entry, index|
 					filename = if collect then "#{@dir}/all_subtitles.txt"
-					else "#{@dir}/#{(index+1).to_s.rjust(3,'0')}_#{entry[:id]}.txt"
+					else "#{@dir}/#{(index+1).to_s.rjust(3,'0')}_#{entry[:title]}.txt"
 					end
 					File.open(filename, 'a+') do |file|
 						file.write("\n\n\n") if collect and index > 0
-						file.write("Video ##{index+1}: #{entry[:id]}\n\n")
+						file.write("Video ##{index+1}: #{entry[:title]}\n\n")
 						file.write("#{entry[:text]}")
 					end
 				end
@@ -164,7 +177,6 @@ module YoutubeSubtitler
 			create_dir(dir_path)
 
 			@downloader = Downloader.new(language)
-			@parser = Parser.new
 			@saver = Saver.new(dir_path)
 			@logger = Logger.new(dir_path, 'errors.log')
 		end
@@ -175,13 +187,13 @@ module YoutubeSubtitler
 			subtitles = []
 			loaded = skipped = 0
 			list_of_links.each do |link|
-				raw_text, title = @downloader.download(link)
+				text, title = @downloader.download(link)
 				if title
-					subtitles << {id: title, text: @parser.parse(raw_text)}
+					subtitles << {title: title, text: text}
 					puts "Loaded".green + ": #{title}"
 					loaded += 1
 				else
-					puts "Skipped".red + ": #{raw_text}"
+					puts "Skipped".red + ": #{text}"
 					skipped += 1
 					@logger.log(link)
 				end
@@ -286,7 +298,7 @@ private
     puts "  -lLANG\n\tAllows to specify desired subtitles language (LANG)\n\n"
     puts "  -c, --collect\n\tCollect all subtitles in one file 'all_subtitles.txt'"
     puts "\nMade for you by Vizvamitra (#{"vizvamitra@gmail.com".blue}, Russia)"
-    puts "Special thanks to Dmitry aka Blackbird~"
+    puts "Special thanks to Dmitry aka Blackbird-"
   end
 
   def error(message, show_usage=nil)
