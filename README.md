@@ -14,7 +14,7 @@ If an error occures with any of given links, script will log these links to file
 
 ##USAGE
 
-	'youtube_subtitler.rb [OUTPUT_DIR, -c, -lLANG] LINKS'
+	`youtube_subtitler.rb [OUTPUT_DIR, -c, -lLANG] LINKS`
 
 	  **LINKS**
 
@@ -30,12 +30,12 @@ If an error occures with any of given links, script will log these links to file
 
 	  *-c*, *--collect*
 
-	  		Collect all subtitles in one file 'all_subtitles.txt'
+	  		Collect all subtitles in one file "all_subtitles.txt"
 
 ##EXAMPLES
 
-	'youtube_subtitler.rb -c -len < linklist.txt'
-	'youtube_subtitler.rb -les-ES "http://youtu.be/e7Fr_sdE4M0"'
+	`youtube_subtitler.rb -c -len < linklist.txt`
+	`youtube_subtitler.rb -les-ES http://youtu.be/e7Fr_sdE4M0`
 
 ##CREDITS
 
