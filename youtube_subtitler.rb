@@ -62,22 +62,47 @@ module YoutubeSubtitler
 
 			# check for language avalability
 			languages = get_languages(video_id)
+			if languages.nil?
+				return ["'#{link}', couldn't download language info", nil]
+			end
 			unless languages.include?(@lang)
 				error = "'#{link}', no such language (available: #{languages.join(', ')})"
 			  return [error, nil]
 			end
 
-			text = open("http://video.google.com/timedtext?lang=#{@lang}&v=#{video_id}").read
-			text.gsub!(/\n/, ' ')
+			# getting video title
+			title = get_title(video_id).gsub(/[^\w\s\d\.$#@!()-=\+\\]/, '').gsub(/\s+/, ' ')
+			title ||= video_id
 
-			[text, video_id]
+			begin
+				text = open("http://video.google.com/timedtext?lang=#{@lang}&v=#{video_id}").read
+				text.gsub!(/\n/, ' ')
+			rescue => e
+				return ["'#{link}', couldn't download subtitles", nil]
+			end
+
+			[text, title]
 		end
 
 	private
 
+		def get_title(video_id)
+			begin
+				raw_info = open("http://gdata.youtube.com/feeds/api/videos/#{video_id}")
+			rescue => e
+				$stderr << "#{'Error'.red}: downloading title for video #{video_id} failed"
+				return nil
+			end
+			Document.new(raw_info).root.elements['title'].text
+		end
+
 		def get_languages(video_id)
 			langs = []
-			raw_langs = open("http://www.youtube.com/api/timedtext?type=list&v=#{video_id}")
+			begin
+				raw_langs = open("http://www.youtube.com/api/timedtext?type=list&v=#{video_id}")
+			rescue => e
+				return nil
+			end
 			Document.new(raw_langs).elements.each('*/track') do |track|
 				langs << track.attributes['lang_code']
 			end
@@ -100,7 +125,7 @@ module YoutubeSubtitler
 			begin
 				subtitles.each.with_index do |entry, index|
 					filename = if collect then "#{@dir}/all_subtitles.txt"
-					else "#{@dir}/#{(index+1).to_s.rjust(3,'0')}_video_#{entry[:id]}.txt"
+					else "#{@dir}/#{(index+1).to_s.rjust(3,'0')}_#{entry[:id]}.txt"
 					end
 					File.open(filename, 'a+') do |file|
 						file.write("\n\n\n") if collect and index > 0
@@ -150,10 +175,10 @@ module YoutubeSubtitler
 			subtitles = []
 			loaded = skipped = 0
 			list_of_links.each do |link|
-				raw_text, video_id = @downloader.download(link)
-				if video_id
-					subtitles << {id: video_id, text: @parser.parse(raw_text)}
-					puts "Loaded".green + ": #{video_id}"
+				raw_text, title = @downloader.download(link)
+				if title
+					subtitles << {id: title, text: @parser.parse(raw_text)}
+					puts "Loaded".green + ": #{title}"
 					loaded += 1
 				else
 					puts "Skipped".red + ": #{raw_text}"
@@ -188,6 +213,7 @@ class App
 		@link_list = []
 		@collect = false
 		@dir = nil
+		@language = nil
 
 		parse_args()
 
@@ -219,9 +245,9 @@ private
     	else
     		error("Wrong parameter: #{arg}", :usage)
     	end
-
-    	@language ||= 'en'
     end
+
+    @language ||= 'en'
 
     if $stdin.stat.size > 0
     	$stdin.each do |line|
