@@ -1,6 +1,6 @@
-#YOUTUBE SUBTITLER
+# YOUTUBE SUBTITLER
 
-###INFO
+### INFO
 
 Youtube subtitler is a Ruby script that could help you to download subtitles for single or many youtube videos at once.
 
@@ -12,33 +12,29 @@ You can also specify the key `-c` (or `--collect`) in order to tell the script t
 
 If an error occures with any of given links, script will log these links to file `subtitles_TIMESTAMP/errors.log` so you can correct your links or perhaps choose another language and give this links to the script again using ` < errors.log`
 
-###USAGE
+### USAGE
 
-	youtube_subtitler.rb [OUTPUT_DIR, -c, -lLANG] LINKS
+```
+youtube_subtitler.rb [OUTPUT_DIR, -c, -lLANG] LINKS
 
-	  LINKS
+  LINKS		Whitespace-separated list of youtube links
 
-	  		Whitespace-separated list of youtube links
+  OUTPUT_DIR	Directory where to create output files
 
-	  OUTPUT_DIR
+  -lLANG	Allows to specify desired subtitles language (LANG)
 
-	  		Directory where to create output files
+  -c, --collect	Collect all subtitles in one file "all_subtitles.txt"
+```
 
-	  -lLANG
+### EXAMPLES
 
-	  		Allows to specify desired subtitles language (LANG)
+```
+ruby youtube_subtitler.rb -c -len < linklist.txt
+ruby youtube_subtitler.rb -les-ES http://youtu.be/e7Fr_sdE4M0
+ruby youtube_subtitler.rb ~/videos/youtube -c http://youtu.be/e7Fr_sdE4M0
+```
 
-	  -c, --collect
-
-	  		Collect all subtitles in one file "all_subtitles.txt"
-
-###EXAMPLES
-
-	ruby youtube_subtitler.rb -c -len < linklist.txt
-	ruby youtube_subtitler.rb -les-ES http://youtu.be/e7Fr_sdE4M0
-	ruby youtube_subtitler.rb ~/videos/youtube -c http://youtu.be/e7Fr_sdE4M0
-
-###CREDITS
+### CREDITS
 
 Made for you by **Vizvamitra** (vizvamitra@gmail.com, Russia)
 
